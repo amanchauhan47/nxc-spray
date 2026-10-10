@@ -29,7 +29,7 @@ Running NetExec manually for a thorough spray means remembering to:
 ## Installation
 
 ```bash
-git clone https://github.com/<your-username>/nxc-spray.git
+git clone https://github.com/amanchauhan47/nxc-spray.git
 cd nxc-spray
 chmod +x nxc-spray.sh
 ```
