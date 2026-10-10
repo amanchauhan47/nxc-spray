@@ -57,7 +57,7 @@ nxc-spray.sh all 10.10.10.10 -u amxn -p password
 nxc-spray.sh smb,ldap,winrm hosts.txt -u amxn -p password
 
 # Multiple targets inline
-nxc-spray.sh all "10.10.10.10 10.10.10.11" -u amxn -p password
+nxc-spray.sh all "10.10.10.10 10.10.10.11 10.10.10.12" -u amxn -p password
 
 # Full wordlist spray across all protocols, all targets
 nxc-spray.sh all targets.txt -u users.txt -p passwords.txt
