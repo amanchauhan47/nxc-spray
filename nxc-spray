@@ -4,9 +4,9 @@
 #   nxcspray <protocols|all> <targets> -u <username> -p <password>
 #
 # Examples:
-#   nxcspray all 10.10.10.10 -u bob -p password
-#   nxcspray smb,ldap,winrm hosts.txt -u bob -p password
-#   nxcspray all "10.10.10.10 10.10.10.11" -u bob -p password
+#   nxcspray all 10.10.10.10 -u amxn -p password
+#   nxcspray smb,ldap,winrm hosts.txt -u amxn -p password
+#   nxcspray all "10.10.10.10 10.10.10.11" -u amxn -p password
 #
 # Tests EVERY protocol against BOTH domain accounts and local (SAM) accounts,
 # and keeps going after a hit instead of stopping at the first valid login.
@@ -25,9 +25,9 @@ Usage: $0 <protocols|all> <targets> -u <username> -p <password>
     -p <password>      Password, or a file of passwords
 
 Examples:
-    $0 all 10.10.10.10 -u bob -p password
-    $0 smb,ldap,winrm hosts.txt -u bob -p password
-    $0 all "10.10.10.10 10.10.10.11" -u bob -p password
+    $0 all 10.10.10.10 -u amxn -p password
+    $0 smb,ldap,winrm hosts.txt -u amxn -p password
+    $0 all "10.10.10.10 10.10.10.11" -u amxn -p password
     $0 all targets.txt -u users.txt -p passwords.txt
 
 Notes:
@@ -94,10 +94,22 @@ CYAN='\033[1;36m'     # local
 RESET='\033[0m'
 
 # ---- Auth Mode Handling ----
-# "" tests domain accounts, "--local-auth" tests local SAM accounts
+# "" tests domain accounts, "--local-auth" tests local SAM accounts.
+# --local-auth is only accepted by protocols that actually have a local
+# account store (SMB/WinRM/MSSQL/RDP). ssh and ldap will reject it outright.
 AUTH_MODES=("" "--local-auth")
 AUTH_LABELS=("domain" "local")
 AUTH_COLORS=("$MAGENTA" "$CYAN")
+
+LOCAL_AUTH_SUPPORTED=(smb winrm mssql rdp)
+
+supports_local_auth() {
+    local proto="$1"
+    for p in "${LOCAL_AUTH_SUPPORTED[@]}"; do
+        [ "$p" = "$proto" ] && return 0
+    done
+    return 1
+}
 
 # ---- Spray Loop ----
 for PROTO in "${PROTO_ARRAY[@]}"; do
@@ -105,6 +117,12 @@ for PROTO in "${PROTO_ARRAY[@]}"; do
         MODE="${AUTH_MODES[$i]}"
         LABEL="${AUTH_LABELS[$i]}"
         COLOR="${AUTH_COLORS[$i]}"
+
+        # Skip the local-auth pass for protocols that don't support it
+        if [ "$LABEL" = "local" ] && ! supports_local_auth "$PROTO"; then
+            echo -e "${COLOR}[~] Skipping $PROTO (auth: local) - not supported by this protocol${RESET}"
+            continue
+        fi
 
         echo -e "${COLOR}[+] Spraying protocol: $PROTO  (auth: ${LABEL})${RESET}"
 
