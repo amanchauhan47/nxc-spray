@@ -37,7 +37,7 @@ chmod +x nxc-spray.sh
 ## Usage
 
 ```bash
-./nxc-spray.sh <protocols|all> <targets> -u <username> -p <password>
+nxc-spray.sh <protocols|all> <targets> -u <username> -p <password>
 ```
 
 | Argument | Description |
@@ -51,16 +51,16 @@ chmod +x nxc-spray.sh
 
 ```bash
 # Single target, single credential, all protocols
-./nxc-spray.sh all 10.10.10.10 -u amxn -p password
+nxc-spray.sh all 10.10.10.10 -u amxn -p password
 
 # Specific protocols only, targets from file
-./nxc-spray.sh smb,ldap,winrm hosts.txt -u amxn -p password
+nxc-spray.sh smb,ldap,winrm hosts.txt -u amxn -p password
 
 # Multiple targets inline
-./nxc-spray.sh all "10.10.10.10 10.10.10.11" -u amxn -p password
+nxc-spray.sh all "10.10.10.10 10.10.10.11" -u amxn -p password
 
 # Full wordlist spray across all protocols, all targets
-./nxc-spray.sh all targets.txt -u users.txt -p passwords.txt
+nxc-spray.sh all targets.txt -u users.txt -p passwords.txt
 ```
 
 Running the script with fewer than 4 arguments prints the full usage block automatically.
