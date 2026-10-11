@@ -54,13 +54,13 @@ nxc-spray.sh <protocols|all> <targets> -u <username> -H <nthash>
 
 ```bash
 # Single target, single credential, all protocols
-nxc-spray.sh all 10.10.10.10 -u amxn -p dotcom
+nxc-spray.sh all 10.10.10.10 -u amxn -p password321
 
 # Specific protocols only, targets from file
-nxc-spray.sh smb,ldap,winrm hosts.txt -u amxn -p dotcom
+nxc-spray.sh smb,ldap,winrm hosts.txt -u amxn -p password321
 
 # Multiple targets inline
-nxc-spray.sh all "10.10.10.10 10.10.10.11" -u amxn -p dotcom
+nxc-spray.sh all "10.10.10.10 10.10.10.11" -u amxn -p password321
 
 # Full wordlist spray across all protocols, all targets
 nxc-spray.sh all targets.txt -u users.txt -p passwords.txt
